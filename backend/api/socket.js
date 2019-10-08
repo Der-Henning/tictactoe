@@ -6,10 +6,8 @@ let io = null;
 exports.start = function(server) {
     io = socketIo(server);
     io.on("connection", socket => {
-        game.newPlayer(socket.id, playerID => {
-            socket.on("disconnect", () => {
-                game.playerDisc(playerID);
-            });
+        socket.on("disconnect", () => {
+            game.playerDisc(socket.id);
         });
     });
 }

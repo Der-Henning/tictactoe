@@ -1,4 +1,4 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
 const Player = require('../models/player');
 
@@ -8,8 +8,20 @@ router.get("/", (req, res) => {
   res.send({ response: "I am alive" }).status(200);
 });
 
-router.get("/hello", (res, res) => {
-
+router.post("/hello", async (req, res) => {
+  if (req.body.socket) {
+    if(req.body.player && await Player.findById(req.body.player)) {
+      const player = await Player.findById(req.body.player);
+      player.socket = req.body.socket;
+      game.newPlayer(player);
+    } else {
+      const player = await Player.create({
+        socket: req.body.socket
+      });
+      game.newPlayer(player);
+    }
+  }
+  res.send({ response: "I am alive" }).status(200);
 });
 
 router.post("/pressbtn", (req, res) => {

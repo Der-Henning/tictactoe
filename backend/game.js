@@ -29,31 +29,32 @@ exports.init = (callback) => {
     });
 }
 
-exports.newPlayer = async function(socketID, playerID) {
-    const newPlayer = await Player.create({
-        socket: socketID,
-        inQueue: true,
-        queueStarted: Date.now()
-    });
-    logger(newPlayer.name + " connected!");
-    playerID(newPlayer._id); 
-    updateClient(null, newPlayer, '');
+exports.newPlayer = async function(player) {
+    player.inQueue = true;
+    player.online = true;
+    player.queueStarted = Date.now();
+    await player.save();
+    logger(player.name + " connected!");
+    updateClient(null, player, null);
     setGame();
 }
 
-exports.playerDisc = async function(playerID) {
-    const player = await Player.findById(playerID);
-    logger(player.name + " disconnected!!");
-    player.online = false;
-    player.inQueue = false;
-    player.socket = null;
-    player.save();
-    if (player.game) {
-        const game = await Game.findById(player.game);
-        game.winner = (game.playerX.equals(player._id)) ? 'O' : 'X';
-        setWinner(game);
-        game.save();
-        updateClients(game);
+exports.playerDisc = async function(socketID) {
+    const players = await Player.find({socket: socketID});
+    if (players.length > 0) {
+        const player = players[0];
+        logger(player.name + " disconnected!!");
+        player.online = false;
+        player.inQueue = false;
+        player.socket = null;
+        player.save();
+        if (player.game) {
+            const game = await Game.findById(player.game);
+            game.winner = (game.playerX.equals(player._id)) ? 'O' : 'X';
+            setWinner(game);
+            game.save();
+            updateClients(game);
+        }
     }
 }
 

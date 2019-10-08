@@ -41,6 +41,9 @@ var playerSchema = new mongoose.Schema( {
     bot: {
         type: Boolean,
         default: false
+    },
+    token: {
+        type: String
     }
 });
 
