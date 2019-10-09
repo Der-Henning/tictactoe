@@ -3,7 +3,11 @@ import './index.css';
 import socketIOClient from 'socket.io-client';
 import { withCookies } from 'react-cookie';
 
-const API = 'http://localhost:4000/';
+let API = '';
+
+if (!process.env.NODE_ENV === 'production') {
+  API = 'http://localhost:4000/';
+}
 
 function Square(props) {
     return (
