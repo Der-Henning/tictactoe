@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Player = require('../models/player');
 
+const path = require('path');
 const game = require('../../game');
 
 if (process.env.NODE_ENV === 'production') {

@@ -7,6 +7,7 @@ const socket = require('./api/socket');
 const game = require('./game');
 const cors = require('cors');
 const app = express();
+const path = require('path');
 
 game.init(()=> {
     app.use(cors());
@@ -23,7 +24,7 @@ game.init(()=> {
         // Serve any static files
         app.use(express.static(path.join(__dirname, '../client/build')));
     }
-    
+
     server.listen(port, () => console.log(`Listening on port ${port}`));
 });
 
