@@ -4,9 +4,18 @@ const Player = require('../models/player');
 
 const game = require('../../game');
 
-router.get("/", (req, res) => {
-  res.send({ response: "I am alive" }).status(200);
-});
+if (process.env.NODE_ENV === 'production') {
+  // Serve any static files
+  router.use(express.static(path.join(__dirname, '../client/build')));
+// Handle React routing, return all requests to React app
+  router.get('/', function(req, res) {
+    res.sendFile(path.join(__dirname, '../client/build', 'index.html'));
+  });
+} else {
+  router.get("/", (req, res) => {
+    res.send({ response: "I am alive" }).status(200);
+  });
+}
 
 router.post("/hello", async (req, res) => {
   if (req.body.socket) {
