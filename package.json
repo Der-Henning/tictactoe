@@ -4,9 +4,13 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "concurrently \"cd backend && npm start\" \"cd client && npm start\"",
-    "dev": "concurrently \"cd backend && npm run dev\" \"cd client && npm start\"",
-    "postinstall": "cd backend && npm install && cd .. && cd client && npm install"
+    "client-install": "npm install --prefix client",
+    "start": "npm start --prefix backend",
+    "server": "npm run dev --prefix backend",
+    "client": "npm start --prefix client",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "postinstall": "cd backend && npm install && cd .. && cd client && npm install",
+    "heroku-postbuild": "NPM_CONFIG_PRODUCTION=false npm install --prefix client && npm run build --prefix client"
   },
   "keywords": [],
   "author": "",
