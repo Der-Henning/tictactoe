@@ -3,8 +3,9 @@ import './index.css';
 import socketIOClient from 'socket.io-client';
 import { withCookies } from 'react-cookie';
 
-
-const API = 'http://localhost:4000/';
+const port = process.env.PORT || 4000;
+const host = 'http://localhost:';
+const API = host + port;
 
 
 function Square(props) {
