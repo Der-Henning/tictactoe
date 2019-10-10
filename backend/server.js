@@ -1,7 +1,7 @@
 const express = require('express');
 const http = require('http');
 const bodyParser = require('body-parser');
-const port = 4000;
+const port = process.env.PORT || 4000;
 const index = require('./api/routes/index');
 const api = require('./api/routes/api');
 const socket = require('./api/socket');
@@ -19,7 +19,7 @@ game.init(()=> {
     app.use(index);
     app.use(api);
 
-    if (process.env.NODE_ENV === 'production') {
+    if (true || process.env.NODE_ENV === 'production') {
         // Serve any static files
         app.use(express.static(path.join(__dirname, '../client/build')));
     }
