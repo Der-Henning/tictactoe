@@ -3,11 +3,6 @@ import './index.css';
 import socketIOClient from 'socket.io-client';
 import { withCookies } from 'react-cookie';
 
-const port = process.env.PORT || 4000;
-const host = 'http://localhost:';
-const API = host + port;
-
-
 function Square(props) {
     return (
         <button className="square" onClick={props.onClick}>
@@ -140,14 +135,12 @@ class Game extends React.Component {
       xIsNext: true,
       winner: null,
       started: false,
-      endpoint: API,
       log: []
     }
   }
 
   componentDidMount() {
-    const { endpoint } = this.state;
-    const socket = socketIOClient(endpoint);
+    const socket = socketIOClient();
     const { cookies } = this.props;
     socket.on('connect', () => {
       fetch("/hello", {
