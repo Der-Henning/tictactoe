@@ -1,15 +1,15 @@
 {
   "name": "tictactoe-backend",
   "version": "1.0.0",
-  "description": "",
+  "description": "Backend for tictactoe-universe",
+  "author": "Henning Merklinger",
+  "license": "ISC",
+  "private": true,
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "body-parser": "^1.19.0",
     "cors": "^2.8.5",

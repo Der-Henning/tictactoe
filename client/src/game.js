@@ -3,11 +3,9 @@ import './index.css';
 import socketIOClient from 'socket.io-client';
 import { withCookies } from 'react-cookie';
 
-let API = '';
 
-if (!process.env.NODE_ENV === 'production') {
-  API = 'http://localhost:4000/';
-}
+const API = 'http://localhost:4000/';
+
 
 function Square(props) {
     return (
@@ -34,7 +32,7 @@ class Logger extends React.Component {
   
 class Board extends React.Component {
   handleClick(i) {
-    fetch(API + "pressbtn", {
+    fetch("/pressbtn", {
       method: 'POST',
       body: JSON.stringify({
         'btnID': i,
@@ -104,7 +102,7 @@ class Board extends React.Component {
 
 class NewGameBtn extends React.Component {
   newGame() {
-    fetch(API + "newgame", {
+    fetch("/newgame", {
       method: 'POST',
       body: JSON.stringify({
         'newGame': true,
@@ -151,7 +149,7 @@ class Game extends React.Component {
     const socket = socketIOClient(endpoint);
     const { cookies } = this.props;
     socket.on('connect', () => {
-      fetch(API + "hello", {
+      fetch("/hello", {
         method: 'POST',
         body: JSON.stringify({
           'socket': socket.id,

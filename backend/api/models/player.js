@@ -26,6 +26,10 @@ var playerSchema = new mongoose.Schema( {
     wlRatio: {
         type: Number,
     },
+    score: {
+        type: Number,
+        default: 0
+    },
     timeoutTimer: Number,
     online: {
         type: Boolean,

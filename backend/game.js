@@ -1,13 +1,11 @@
 const socket = require('./api/socket');
-
 const Game = require('./api/models/game')
 const Player = require('./api/models/player');
 const Status = require('./api/models/status');
-
-const TIMEOUT = 30000;
-const BOTSPAWNTIME = 3000;
-
 const connect = require('./api/models/db');
+
+const TIMEOUT = process.env.PLAYER_TIMEOUT || 30000;
+const BOTSPAWNTIME = process.env.BOTSPAWNTIME || 3000;
 
 exports.init = (callback) => {
     connect.then(async () => {

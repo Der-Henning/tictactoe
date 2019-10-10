@@ -22,6 +22,7 @@
 /client/.env.test.local
 /client/.env.production.local
 
+/client/debug.log
 /client/npm-debug.log*
 /client/yarn-debug.log*
 /client/yarn-error.log*

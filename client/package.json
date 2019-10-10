@@ -1,6 +1,9 @@
 {
-  "name": "tictacto-client",
+  "name": "tictactoe-client",
   "version": "1.0.0",
+  "description": "Frontend for tictactoe-universe",
+  "author": "Henning Merklinger",
+  "license": "ISC",
   "private": true,
   "dependencies": {
     "react": "^16.9.0",
