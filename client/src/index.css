@@ -1,16 +1,30 @@
 body {
     font: 14px "Century Gothic", Futura, sans-serif;
-    margin: 20px;
+    margin: 0;
   }
   
   ol, ul {
     padding-left: 30px;
   }
   
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+  .board-row {
+
+    width: 100%;
+    height: calc(100% / 3);
+
+  }
+
+
   .board-row:after {
     clear: both;
     content: "";
     display: table;
+
   }
   
   .status {
@@ -24,44 +38,126 @@ body {
     font-size: 50px;
     font-weight: bold;
     line-height: 70px;
-    height: 70px;
+    height: 100%;
     margin-right: -1px;
     margin-top: -1px;
     padding: 0;
     text-align: center;
-    width: 70px;
+    width: calc(100% / 3);
+    position: relative;
   }
   
   .square:focus {
     outline: none;
   }
+
+ .X {
+    background: url(x.svg) no-repeat top left;
+    background-size: contain;
+  }
+
+  .O {
+    background: url(o.svg) no-repeat top left;
+    background-size: contain;
+  }
   
   .kbd-navigation .square:focus {
     background: #ddd;
   }
-  
+
   .game {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    height: 100%;
+    height:100vh; 
+    width: 100vw;
+    display: grid; 
+    grid-gap: 10px 10px; 
+    grid-template-rows: 20px 10px 1fr 1fr 20px; 
+    grid-template-columns: 100%; 
+    grid-template-areas:  
+      "header" 
+      "status"
+      "game" 
+      "info"
+      "footer" 
+    ; 
   }
 
-  .game-board {
-    min-width: 230px;
-    margin-bottom: 20px;
+  @media screen and (min-width: 500px) { 
+    .game {
+      grid-template-rows: 20px 20px 1fr 20px; 
+      grid-template-columns: 1fr 1fr; 
+      grid-template-areas:  
+        "header header" 
+        "status game "
+        "info game " 
+        "footer footer " 
+      ; 
+    }
+  }
+
+    @media screen and (min-width: 700px) { 
+    .game {
+      grid-template-rows: 20px 20px 1fr 20px; 
+      grid-template-columns: 1fr 1fr 1fr; 
+      grid-template-areas:  
+        "header header header" 
+        "empty status log"
+        "info game log" 
+        "footer footer footer" 
+      ; 
+    }
+  }
+
+  @media screen and (max-width: 700px) {
+    .game-log {
+      display: none;
+    }
+  }
+
+.game-board {
+  grid-area: game;
+  width: 100%;
+  height: 100%;
+  align-self: start;
+  justify-self: center;
+  max-width: 450px;
+  max-height: 450px;
+}
+
+  .board-container {
+    width: 100%; 
+    padding-top: 100%;
+    position: relative;
+  }
+
+  .board-row-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    padding: 10px;
   }
   
   .game-info {
-    
-    min-width: 150PX;
+    grid-area: info;
+    align-self: start;
+    justify-self: center;
   }
 
   .spacer {
     height: 20px;
   }
   .game-log {
-    min-width: 200px;
+    grid-area: log;
+    align-self: start;
+    justify-self: center;
+    height: 100%;
+    overflow: hidden;
+  }
+  .game-status {
+    grid-area: status;
+    align-self: center;
+    justify-self: center;
   }
 
   .newGameBtn {

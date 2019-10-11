@@ -1,5 +1,5 @@
 const socketIo = require("socket.io");
-const game = require('../game');
+const game = require('../game/game');
 
 let io = null;
 
@@ -18,4 +18,10 @@ exports.emit = function(API, socketID, res) {
 
 exports.broadcast = function(API, res) {
     io.emit(API, res);
+}
+
+exports.kickSocket = function(socketID, reason) {
+    io.to(socketID).emit("APIkick", {
+        reason: reason
+    });
 }

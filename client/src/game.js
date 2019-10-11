@@ -5,8 +5,8 @@ import { withCookies } from 'react-cookie';
 
 function Square(props) {
     return (
-        <button className="square" onClick={props.onClick}>
-            {props.value}
+        <button className={"square " + props.value} onClick={props.onClick}>
+            
         </button>
     )
 }
@@ -28,7 +28,7 @@ class Logger extends React.Component {
   
 class Board extends React.Component {
   handleClick(i) {
-    fetch("/pressbtn", {
+    fetch("/api/pressbtn", {
       method: 'POST',
       body: JSON.stringify({
         'btnID': i,
@@ -36,6 +36,7 @@ class Board extends React.Component {
       }),
       headers: {
         'Content-Type': 'application/json',
+        'x-access-token': this.props.token
       },
     }); 
   } 
@@ -50,7 +51,7 @@ class Board extends React.Component {
   }
 
   render() {
-    if (this.props.started) {
+    if (this.props.game) {
       let status;
       if (this.props.winner) {
           status = 'Winner: ' + this.props.winner;
@@ -59,29 +60,35 @@ class Board extends React.Component {
               'X' : 'O');
       }
 
-      return (
-        <div>
-          <div className="status">{status}</div>
-          <div className="board-row">
-            {this.renderSquare(0)}
-            {this.renderSquare(1)}
-            {this.renderSquare(2)}
+      
+        return [
+          <div className="game-status">{status}</div>,
+          <div className="game-board">
+            <div className="board-container">
+              <div className="board-row-container">
+                <div className="board-row row1">
+                  {this.renderSquare(0)}
+                  {this.renderSquare(1)}
+                  {this.renderSquare(2)}
+                </div>
+                <div className="board-row row2">
+                  {this.renderSquare(3)}
+                  {this.renderSquare(4)}
+                  {this.renderSquare(5)}
+                </div>
+                <div className="board-row row3">
+                  {this.renderSquare(6)}
+                  {this.renderSquare(7)}
+                  {this.renderSquare(8)}
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="board-row">
-            {this.renderSquare(3)}
-            {this.renderSquare(4)}
-            {this.renderSquare(5)}
-          </div>
-          <div className="board-row">
-            {this.renderSquare(6)}
-            {this.renderSquare(7)}
-            {this.renderSquare(8)}
-          </div>
-        </div>
-      );
+        ];
+      
     } else {
       return (
-        <div>
+        <div className="game-board">
           Waiting for opponent ...
         </div>
       );
@@ -97,19 +104,6 @@ class Board extends React.Component {
 }
 
 class NewGameBtn extends React.Component {
-  newGame() {
-    fetch("/newgame", {
-      method: 'POST',
-      body: JSON.stringify({
-        'newGame': true,
-        'player': this.props.player
-      }),
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-  }
-
   shouldComponentUpdate(nextProps) {
     return this.props.winner !== nextProps.winner;
   }
@@ -117,7 +111,7 @@ class NewGameBtn extends React.Component {
   render() {
     if (this.props.winner) {
       return(
-        <button className="newGameBtn" onClick={() => this.newGame()}>
+        <button className="newGameBtn" onClick={() => newGame(this.props.token)}>
           New Game
         </button>
       )
@@ -135,7 +129,8 @@ class Game extends React.Component {
       xIsNext: true,
       winner: null,
       started: false,
-      log: []
+      log: [],
+      kicked: false
     }
   }
 
@@ -143,72 +138,104 @@ class Game extends React.Component {
     const socket = socketIOClient();
     const { cookies } = this.props;
     socket.on('connect', () => {
-      fetch("/hello", {
-        method: 'POST',
-        body: JSON.stringify({
-          'socket': socket.id,
-          'player': cookies.get('name')
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
+       if (!cookies.get('token')) {
+        fetch("/user/newanonymous", {
+          method: 'POST',
+          body: JSON.stringify({
+            'socket': socket.id
+          }),
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        .then(res => {
+          this.setState({token: res.headers.get("x-auth-token")});
+          cookies.set('token', this.state.token, 
+            { path: '/', expires: new Date(Date.now() + (10 * 365 * 24 * 60 * 60 * 1000))});
+        });
+      } else {
+        this.setState({
+          token: cookies.get('token')
+        });
+        fetch("/user/connect", {
+          method: 'POST',
+          body: JSON.stringify({
+            'socket': socket.id
+          }),
+          headers: {
+            'Content-Type': 'application/json',
+            'x-access-token': this.state.token
+          }
+        });
+      } 
     });
 
     socket.on("FromAPI", data => {
-        this.setState({
-            player: data.player,
-            name: data.name,
-            side: data.side,
-            squares: data.squares,
-            xIsNext: data.xIsNext,
-            winner: data.winner,
-            started: data.started,
-            gameName: data.gameName,
-            winns: data.winns,
-            losses: data.losses,
-            draws: data.draws
-        });
-        cookies.set('name', this.state.player, { path: '/', expires: new Date(Date.now() + (10 * 365 * 24 * 60 * 60 * 1000))});
+        this.setState(data);
     });
     socket.on("LogAPI", data => {
       this.setState({
         log: this.state.log.reverse().concat(data).reverse()
       });
     });
+    socket.on("APIkick", () => {
+      this.setState({
+        kicked: true
+      });
+      console.log("kicked");
+    });
   }
   
   render() {
-    return (
-      <div className="game">
-        <div className="game-board">
+    if(this.state.kicked) {
+      return (
+        <div>Kicked by Server!</div>
+      );
+    } else {
+      return (
+        <div className="game">
+
           <Board 
             squares={this.state.squares}
             xIsNext={this.state.xIsNext}
             winner={this.state.winner}
-            player={this.state.player}
             started={this.state.started}
             game={this.state.gameName}
+            token={this.state.token}
           />
-        </div>
-        <div className="game-info">
-          <div>Wellcome {this.state.name} !!</div>
-          <div>You are Player {this.state.side}</div>
-          <div className="spacer"></div>
-          <div>Winns: {this.state.winns}</div>
-          <div>Losses: {this.state.losses}</div>
-          <div>Draws: {this.state.draws}</div>
-          <div><NewGameBtn 
-            winner={this.state.winner}
-            player={this.state.player}
+
+          <div className="game-info">
+            <div>Wellcome {this.state.name} !!</div>
+            <div>You are Player {this.state.side}</div>
+            <div className="spacer"></div>
+            <div>Winns: {this.state.winns}</div>
+            <div>Losses: {this.state.losses}</div>
+            <div>Draws: {this.state.draws}</div>
+            <div><NewGameBtn 
+              winner={this.state.winner}
+              token={this.state.token}
+            /></div>
+          </div>
+          <div className="game-log"><Logger
+            log={this.state.log}
           /></div>
         </div>
-        <div className="game-log"><Logger
-          log={this.state.log}
-        /></div>
-      </div>
-    );
+      );
+    }
   }
+}
+
+function newGame(token) {
+  fetch("/api/newgame", {
+    method: 'POST',
+    body: JSON.stringify({
+      'newGame': true
+    }),
+    headers: {
+      'Content-Type': 'application/json',
+      'x-access-token': token
+    },
+  });
 }
 
 export default withCookies(Game);
