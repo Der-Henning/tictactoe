@@ -33,9 +33,8 @@ mongoose.connect(MONGODB,
             app.use(index);
             app.use(api);
             app.use(user);
-            if (process.env.NODE_ENV === 'production') {
-                app.use(express.static(path.join(__dirname, '../client/build')));
-            }
+            app.use(express.static(path.join(__dirname, '../client/build')));
+            
             server.listen(port, () => console.log(`Listening on port ${port}...`));
         });
     });
