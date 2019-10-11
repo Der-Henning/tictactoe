@@ -1,10 +1,25 @@
+const config = require('config');
+const Joi = require('joi');
+const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const Status = require('./status');
 
 var playerSchema = new mongoose.Schema( {
     name: {
         type: String,
-        unique: true
+        unique: true,
+        minlength: 3,
+        maxlength: 50
+    },
+    email: {
+        type: String,
+        minlength: 5,
+        maxlength: 255
+    },
+    password: {
+        type: String,
+        minlength: 3,
+        maxlength: 255
     },
     socket: String,
     game: {
@@ -25,6 +40,7 @@ var playerSchema = new mongoose.Schema( {
     },
     wlRatio: {
         type: Number,
+        default: 1
     },
     score: {
         type: Number,
@@ -51,9 +67,14 @@ var playerSchema = new mongoose.Schema( {
     }
 });
 
+playerSchema.methods.generateAuthToken = function() { 
+    const token = jwt.sign({ _id: this._id, name: this.name }, config.get('myprivatekey'));
+    return token;
+  }
+
+
 playerSchema.pre('save', async function(next) {
     var player = this;
-    player.wlRatio = (player.losses === 0) ? null : (player.winns / player.losses);
     if (!player.name && !player.bot) {
         const status = await Status.findByIdAndUpdate('serverStatus', {$inc: { playerCounter: 1} });
         player.name = 'Player#' + (status.playerCounter + 1);
@@ -67,4 +88,17 @@ playerSchema.pre('save', async function(next) {
     }
 });
 
-module.exports = mongoose.model('Player', playerSchema);
+function validateUser(user) {
+    const schema = {
+      name: Joi.string().min(3).max(50).required(),
+      email: Joi.string().min(5).max(255).required().email(),
+      password: Joi.string().min(3).max(255).required()
+    };
+  
+    return Joi.validate(user, schema);
+  }
+
+exports.Player = mongoose.model('Player', playerSchema);
+exports.validate = validateUser;
+
+//module.exports = mongoose.model('Player', playerSchema);

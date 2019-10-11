@@ -1,36 +1,34 @@
-const socket = require('./api/socket');
-const Game = require('./api/models/game')
-const Player = require('./api/models/player');
-const Status = require('./api/models/status');
-const connect = require('./api/models/db');
+const socket = require('../middleware/socket');
+const Game = require('../models/game')
+const {Player} = require('../models/player');
+const Status = require('../models/status');
 
 const TIMEOUT = process.env.PLAYER_TIMEOUT || 30000;
 const BOTSPAWNTIME = process.env.BOTSPAWNTIME || 3000;
 
-exports.init = (callback) => {
-    connect.then(async () => {
-        const Players = await Player.find({ $or:[ {online: true}, {inQueue: true} ]});
-        Players.forEach(player => {
-            player.online = false;
-            player.inQueue = false;
-            player.socket = null;
-            player.save();
-        });
-        const status = await Status.findById('serverStatus');
-        if (!status) {
-            await Status.create({
-                _id: 'serverStatus'
-            });
-            console.log("database initialized");
-        }
-        callback(true);
+exports.init = async () => {
+    const Players = await Player.find({ $or:[ {online: true}, {inQueue: true} ]});
+    Players.forEach(player => {
+        player.online = false;
+        player.inQueue = false;
+        player.socket = null;
+        player.game = null;
+        player.save();
     });
+    const status = await Status.findById('serverStatus');
+    if (!status) {
+        await Status.create({
+            _id: 'serverStatus'
+        });
+    }
+    console.log("Initialized database...");
 }
 
 exports.newPlayer = async function(player) {
     player.inQueue = true;
     player.online = true;
     player.queueStarted = Date.now();
+    player.timeoutTimer = null;
     await player.save();
     logger(player.name + " connected!");
     updateClient(null, player, null);
@@ -45,11 +43,11 @@ exports.playerDisc = async function(socketID) {
         player.online = false;
         player.inQueue = false;
         player.socket = null;
-        player.save();
+        await player.save();
         if (player.game) {
             const game = await Game.findById(player.game);
             game.winner = (game.playerX.equals(player._id)) ? 'O' : 'X';
-            setWinner(game);
+            await setWinner(game);
             game.save();
             updateClients(game);
         }
@@ -58,11 +56,13 @@ exports.playerDisc = async function(socketID) {
 
 exports.newGame = async function(playerID) {
     const player = await Player.findById(playerID);
-    player.inQueue = true;
-    player.queueStarted = Date.now();
-    updateClient(null, player, null);
-    await player.save();
-    setGame();
+    if (!player.game) {
+        player.inQueue = true;
+        player.queueStarted = Date.now();
+        updateClient(null, player, null);
+        await player.save();
+        setGame();
+    }
 }
 
 exports.playerAction = function(playerID, btn) {
@@ -96,23 +96,32 @@ async function setGame() {
 
 async function playerAction(playerID, btn) {
     const player = await Player.findById(playerID);
-    const game = await Game.findById(player.game);
+    let game = null;
+    if(player.game) {
+        game = await Game.findById(player.game);
 
-    if((game.playerX.equals(player._id) && !game.xIsNext) || (game.playerO.equals(player._id) && game.xIsNext)) return;
-    if(game.winner || game.squares[btn]) return;
-    player.timeoutTimer = null;
-    player.save();
-    game.squares[btn] = game.xIsNext ? 'X' : 'O';
-    game.xIsNext = !game.xIsNext;
-    game.markModified('squares');
+        if((game.playerX && game.playerX.equals(player._id) && !game.xIsNext) ||
+            (game.playerO && game.playerO.equals(player._id) && game.xIsNext)) return;
+        if(game.winner || game.squares[btn]) return;
+        player.timeoutTimer = null;
+        player.save();
+        game.squares[btn] = game.xIsNext ? 'X' : 'O';
+        game.xIsNext = !game.xIsNext;
+        game.markModified('squares');
 
-    game.winner = calculateWinner(game);
+        game.winner = calculateWinner(game);
 
-    if (game.winner) await setWinner(game);
+        if (game.winner) await setWinner(game);
 
-    await game.save();
+        await game.save();
 
-    updateClients(game);
+        updateClients(game);
+    }
+/*     if (game) {
+        updateClients(game);
+    } else {
+        updateClient(null, player, null);
+    } */
 }
 
 async function setWinner(game) {
@@ -125,18 +134,41 @@ async function setWinner(game) {
     } else if (game.winner === "X") {
         playerX.winns++;
         playerO.losses++;
+
+        playerX.wlRatio = (playerX.losses === 0) ? 1 : (playerX.winns / playerX.losses);
+        playerX.score += winScore(playerX.losses, playerX.winns);
+        playerO.wlRatio = (playerO.losses === 0) ? 1 : (playerO.winns / playerO.losses);
+        playerO.score += lossScore(playerO.losses, playerO.winns);
+        if (playerO.score < 0) playerO.score = 0;
+
         logger("Winner of " + game.name + ": " + playerX.name + " (X)");
     } else if (game.winner === "O") {
         playerX.losses++;
         playerO.winns++;
+
+        playerX.wlRatio = (playerX.losses === 0) ? 1 : (playerX.winns / playerX.losses);
+        playerX.score += lossScore(playerX.losses, playerX.winns);
+        playerO.wlRatio = (playerO.losses === 0) ? 1 : (playerO.winns / playerO.losses);
+        playerO.score += winScore(playerO.losses, playerO.winns);
+        if (playerX.score < 0) playerX.score = 0;
+
         logger("Winner of " + game.name + ": " + playerO.name + " (O)");
     }
+    
     playerX.game = null;
     playerO.game = null;
     if (playerX.bot) playerX.online = false;
     if (playerO.bot) playerO.online = false;
-    playerX.save();
-    playerO.save();
+    await playerX.save();
+    await playerO.save();
+}
+
+function winScore(losses, winns) {
+    return 10 * Math.sqrt((winns + 1) / (losses + 1));
+}
+
+function lossScore(losses, winns) {
+    return -5 * Math.sqrt((losses + 1) / (winns + 1));
 }
 
 async function updateClients(game) {
@@ -151,7 +183,9 @@ async function updateClients(game) {
 function updateClient(game, player, side) {
     if (!game) {
         game = {
-            started: false
+            started: false,
+            winner: null,
+            name: null
         }
     }
     const res = {
@@ -161,15 +195,16 @@ function updateClient(game, player, side) {
         xIsNext: game.xIsNext,
         started: game.started,
         name: player.name,
-        player: player._id,
         side: side,
         winns: player.winns,
         losses: player.losses,
         draws: player.draws,
-        wlRatio: player.wlRatio
+        wlRatio: player.wlRatio,
+        score: player.score
     }
     socket.emit('FromAPI', player.socket, res);
     if (player.bot) {
+        res.player = player._id;
         botAction(res);
     } else if (game.started && !game.winner && ((game.xIsNext && side === 'X') || (!game.xIsNext && side === 'O'))) {
         player.timeoutTimer = Date.now() + TIMEOUT;
