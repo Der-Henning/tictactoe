@@ -2,14 +2,8 @@ const router = require('express').Router();
 
 const path = require('path');
 
-if (process.env.NODE_ENV === 'production') {
-  router.get('/', function(req, res) {
-    res.sendFile(path.join(__dirname, '../../../client/build', 'index.html'));
-  });
-} else {
-  router.get("/", (req, res) => {
-    res.send({ response: "I am alive" }).status(200);
-  });
-}
+router.get('/', function(req, res) {
+  res.sendFile(path.join(__dirname, '../../client/build', 'index.html'));
+});
 
 module.exports = router;
