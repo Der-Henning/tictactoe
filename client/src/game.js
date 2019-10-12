@@ -5,16 +5,14 @@ import { withCookies } from 'react-cookie';
 
 function Square(props) {
     return (
-        <button className={"square " + props.value} onClick={props.onClick}>
-            
-        </button>
+        <button className={"square " + props.value} onClick={props.onClick}/>
     )
 }
 
 class Logger extends React.Component {
   render() {
     return (
-      <div>
+      <div className="game-log">
         {this.props.log.map((item, index) => (
           <p key={index}>{item}</p>
         ))}
@@ -23,6 +21,36 @@ class Logger extends React.Component {
   }
   shouldComponentUpdate(nextProps) {
     return this.props.log.length !== nextProps.log.length;
+  }
+}
+
+class Header extends React.Component {
+  render() {
+    return (
+      <div className="game-header">
+        {this.props.name}
+      </div>
+    )
+  }
+}
+
+class Info extends React.Component {
+  render() {
+    return (
+      <div className="game-info">
+        <div>Wellcome {this.props.name} !!</div>
+        <div className="spacer"></div>
+        <div>You are Player {this.props.side}</div>
+        <div className="spacer"></div>
+        <div>Winns: {this.props.winns}</div>
+        <div>Losses: {this.props.losses}</div>
+        <div>Draws: {this.props.draws}</div>
+        <div><NewGameBtn 
+          winner={this.props.winner}
+          token={this.props.token}
+        /></div>
+      </div>
+    )
   }
 }
   
@@ -59,37 +87,36 @@ class Board extends React.Component {
           status = 'Next player: ' + (this.props.xIsNext ?
               'X' : 'O');
       }
-
-      
-        return [
-          <div className="game-status">{status}</div>,
-          <div className="game-board">
-            <div className="board-container">
-              <div className="board-row-container">
-                <div className="board-row row1">
-                  {this.renderSquare(0)}
-                  {this.renderSquare(1)}
-                  {this.renderSquare(2)}
-                </div>
-                <div className="board-row row2">
-                  {this.renderSquare(3)}
-                  {this.renderSquare(4)}
-                  {this.renderSquare(5)}
-                </div>
-                <div className="board-row row3">
-                  {this.renderSquare(6)}
-                  {this.renderSquare(7)}
-                  {this.renderSquare(8)}
-                </div>
+      return [
+        <div className="game-status">{status}</div>,
+        <div className="game-board">
+          <div className="board-container">
+            <div className="board-row-container">
+              <div className="board-row row1">
+                {this.renderSquare(0)}
+                {this.renderSquare(1)}
+                {this.renderSquare(2)}
+              </div>
+              <div className="board-row row2">
+                {this.renderSquare(3)}
+                {this.renderSquare(4)}
+                {this.renderSquare(5)}
+              </div>
+              <div className="board-row row3">
+                {this.renderSquare(6)}
+                {this.renderSquare(7)}
+                {this.renderSquare(8)}
               </div>
             </div>
           </div>
-        ];
-      
+        </div>
+      ];
     } else {
       return (
         <div className="game-board">
-          Waiting for opponent ...
+          <center>
+            Waiting for opponent ...
+          </center>
         </div>
       );
     }
@@ -204,21 +231,23 @@ class Game extends React.Component {
             token={this.state.token}
           />
 
-          <div className="game-info">
-            <div>Wellcome {this.state.name} !!</div>
-            <div>You are Player {this.state.side}</div>
-            <div className="spacer"></div>
-            <div>Winns: {this.state.winns}</div>
-            <div>Losses: {this.state.losses}</div>
-            <div>Draws: {this.state.draws}</div>
-            <div><NewGameBtn 
-              winner={this.state.winner}
-              token={this.state.token}
-            /></div>
-          </div>
-          <div className="game-log"><Logger
+          <Header
+            name={this.state.name}
+          />
+
+          <Info 
+            name={this.state.name}
+            side={this.state.side}
+            winns={this.state.winns}
+            losses={this.state.losses}
+            draws={this.state.draws}
+            winner={this.state.winner}
+            token={this.state.token}
+          />
+
+          <Logger
             log={this.state.log}
-          /></div>
+          />
         </div>
       );
     }

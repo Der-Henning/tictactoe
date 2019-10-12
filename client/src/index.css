@@ -86,8 +86,8 @@ body {
       grid-template-rows: 20px 20px 1fr 20px; 
       grid-template-columns: 1fr 1fr; 
       grid-template-areas:  
-        "header header" 
-        "status game "
+        "header status" 
+        "info game "
         "info game " 
         "footer footer " 
       ; 
@@ -112,6 +112,10 @@ body {
       display: none;
     }
   }
+
+.game-header {
+  grid-area: header;
+}
 
 .game-board {
   grid-area: game;
