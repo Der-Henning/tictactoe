@@ -9,6 +9,43 @@ function Square(props) {
     )
 }
 
+class Registration extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      error: ''
+    }
+  }
+  render() {
+    return (
+      
+        <form name="regForm" onSubmit="return register()">
+          <label for="name">Username:</label><br />
+          <input type="text" name="name" value={this.props.name}/><br />
+          <label for="email">E-Mail:</label><br />
+          <input type="text" name="email"/><br />
+          <label for="password">Password:</label><br />
+          <input type="password" name="password"/><br />
+          <label for="repPassword">repeat password:</label><br />
+          <input type="password" name="repPassword"/><br /><br />
+          <input type="submit" name="submit" value="submit"/><br />
+          <div className="error">{this.state.error}</div>
+        </form>
+      
+    )
+  }
+
+  register() {
+    if (document.regForm.password !== document.regForm.repPassword){
+      this.setState({
+        error: 'Passwords don\'t match!'
+      });
+    } else {
+
+    }
+  }
+}
+
 class Logger extends React.Component {
   render() {
     return (
@@ -19,16 +56,42 @@ class Logger extends React.Component {
       </div>
     )
   }
-  shouldComponentUpdate(nextProps) {
-    return this.props.log.length !== nextProps.log.length;
-  }
 }
 
 class Header extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      form: false
+    }
+  }
+  headerClick() {
+    this.setState({form: true});
+  }
+
+  openForm() {
+    if (this.state.form) {
+      if (this.props.email) {
+        return null;
+      } else {
+        return (
+          <div id="formContainer">
+            <div id="regForm">
+              <button onClick={()=>this.setState({form: false})}>X</button>
+              <Registration
+                name={this.props.name}
+              />
+            </div>
+          </div>
+        )
+      }
+    } else return null;
+  }
   render() {
     return (
       <div className="game-header">
-        {this.props.name}
+        <button onClick={()=>this.setState({form: true})}>{this.props.name}</button>
+        {this.openForm()}
       </div>
     )
   }
@@ -36,11 +99,15 @@ class Header extends React.Component {
 
 class Info extends React.Component {
   render() {
+    let status;
+    if (this.props.side) {
+      status = "You are Player " + this.props.side;
+    }
     return (
       <div className="game-info">
         <div>Wellcome {this.props.name} !!</div>
         <div className="spacer"></div>
-        <div>You are Player {this.props.side}</div>
+        <div>{status}</div>
         <div className="spacer"></div>
         <div>Winns: {this.props.winns}</div>
         <div>Losses: {this.props.losses}</div>
@@ -50,6 +117,23 @@ class Info extends React.Component {
           token={this.props.token}
         /></div>
       </div>
+    )
+  }
+}
+
+class Status extends React.Component {
+  render() {
+    let status;
+    if (this.props.inQueue) {
+      status = 'Waiting for opponent ...';
+    } else if (this.props.winner) {
+      status = 'Winner: ' + this.props.winner;
+    } else {
+        status = 'Next player: ' + (this.props.xIsNext ?
+            'X' : 'O');
+    }
+    return(
+      <div className="game-status">{status}</div>
     )
   }
 }
@@ -79,16 +163,8 @@ class Board extends React.Component {
   }
 
   render() {
-    if (this.props.game) {
-      let status;
-      if (this.props.winner) {
-          status = 'Winner: ' + this.props.winner;
-      } else {
-          status = 'Next player: ' + (this.props.xIsNext ?
-              'X' : 'O');
-      }
-      return [
-        <div className="game-status">{status}</div>,
+    if (this.props.squares && !this.props.inQueue) {
+      return (
         <div className="game-board">
           <div className="board-container">
             <div className="board-row-container">
@@ -110,23 +186,10 @@ class Board extends React.Component {
             </div>
           </div>
         </div>
-      ];
+      )
     } else {
-      return (
-        <div className="game-board">
-          <center>
-            Waiting for opponent ...
-          </center>
-        </div>
-      );
+      return null;
     }
-  }
-
-  shouldComponentUpdate(nextProps) {
-    return this.props.started !== nextProps.started ||
-        this.props.xIsNext !== nextProps.xIsNext ||
-        this.props.game !== nextProps.game ||
-        this.props.winner !== nextProps.winner;
   }
 }
 
@@ -150,14 +213,8 @@ class Game extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      player: null,
-      side: null,
-      squares: false,
-      xIsNext: true,
-      winner: null,
-      started: false,
-      log: [],
-      kicked: false
+
+      log: []
     }
   }
 
@@ -196,9 +253,20 @@ class Game extends React.Component {
         });
       } 
     });
-
-    socket.on("FromAPI", data => {
-        this.setState(data);
+    socket.on("Game", data => {
+      this.setState(data);
+    });
+    socket.on("Player", data => {
+      if (data.inQueue) {
+        this.setState({
+          squares: null,
+          winner: null,
+          game: null,
+          side: null
+        });
+      }
+      
+      this.setState(data);
     });
     socket.on("LogAPI", data => {
       this.setState({
@@ -221,6 +289,16 @@ class Game extends React.Component {
     } else {
       return (
         <div className="game">
+          <Header
+            name={this.state.name}
+          />
+
+          <Status
+            winner={this.state.winner}
+            xIsNext={this.state.xIsNext}
+            started={this.state.started}
+            inQueue={this.state.inQueue}
+          />
 
           <Board 
             squares={this.state.squares}
@@ -228,11 +306,8 @@ class Game extends React.Component {
             winner={this.state.winner}
             started={this.state.started}
             game={this.state.gameName}
+            inQueue={this.state.inQueue}
             token={this.state.token}
-          />
-
-          <Header
-            name={this.state.name}
           />
 
           <Info 

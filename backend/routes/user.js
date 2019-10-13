@@ -62,7 +62,16 @@ router.post("/user/registration", auth, async (req, res) => {
 
   const token = player.generateAuthToken();
   res.header("x-auth-token", token).send({
-    _id: player._id,
+    name: player.name,
+    email: player.email
+  });
+});
+
+router.post("/user/login", async (req, res) => {
+  const player = Player.findOne({$or: [{email: req.body.login}, {name: req.body.login}], password: await bcrypt.hash(req.body.password, 10)});
+  if(!player) return res.status(400).send("Unknown Username/Password combination");
+  const token = player.generateAuthToken();
+  res.header("x-auth-token", token).send({
     name: player.name,
     email: player.email
   });
