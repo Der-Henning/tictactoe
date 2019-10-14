@@ -13,36 +13,73 @@ class Registration extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      error: ''
+      error: '',
+      name: this.props.name,
+      email: '',
+      password: ''
     }
+    this.handleChange = this.handleChange.bind(this);
+    this.register = this.register.bind(this);
   }
   render() {
+    //let name = this.props.name;
     return (
-      
-        <form name="regForm" onSubmit="return register()">
-          <label for="name">Username:</label><br />
-          <input type="text" name="name" value={this.props.name}/><br />
-          <label for="email">E-Mail:</label><br />
-          <input type="text" name="email"/><br />
-          <label for="password">Password:</label><br />
-          <input type="password" name="password"/><br />
-          <label for="repPassword">repeat password:</label><br />
-          <input type="password" name="repPassword"/><br /><br />
-          <input type="submit" name="submit" value="submit"/><br />
-          <div className="error">{this.state.error}</div>
-        </form>
-      
+      <form name="regForm">
+        <label for="name">Username:</label><br />
+        <input type="text" name="name" value={this.state.name} onChange={this.handleChange} required/><br />
+        <label for="email">E-Mail:</label><br />
+        <input type="text" name="email" onChange={this.handleChange} required/><br />
+        <label for="password">Password:</label><br />
+        <input type="password" name="password" onChange={this.handleChange} required/><br />
+        <label for="repPassword">repeat password:</label><br />
+        <input type="password" name="repPassword" onChange={this.handleChange} required/><br /><br />
+        <input type="button" name="submit" value="submit" onClick={this.register}/><br />
+        <div className="error">{this.state.error}</div>
+      </form>
     )
   }
 
-  register() {
-    if (document.regForm.password !== document.regForm.repPassword){
+  handleChange(event) {
+    this.setState({[event.target.name]: event.target.value});
+  }
+
+  register(event) {
+    const { cookies } = this.props;
+    console.log(this.props.token);
+    this.setState({
+      error: ''
+    });
+    if (this.state.password !== this.state.repPassword){
       this.setState({
         error: 'Passwords don\'t match!'
       });
     } else {
-
+      fetch("/user/registration", {
+        method: 'POST',
+        body: JSON.stringify({
+          'name': this.state.name,
+          'email': this.state.email,
+          'password': this.state.password
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+          'x-access-token': this.props.token
+        }
+      })
+      .then(res => {
+        if (res.status === 200) {
+          this.setState({token: res.headers.get("x-auth-token")});
+          cookies.set('token', this.state.token, 
+            { path: '/', expires: new Date(Date.now() + (10 * 365 * 24 * 60 * 60 * 1000))});
+        } else {
+          return res.text();
+        }
+      })
+      .then(data => {
+        console.log(data);
+      });
     }
+    event.preventDefault();
   }
 }
 
@@ -80,6 +117,7 @@ class Header extends React.Component {
               <button onClick={()=>this.setState({form: false})}>X</button>
               <Registration
                 name={this.props.name}
+                token={this.props.token}
               />
             </div>
           </div>
@@ -291,6 +329,7 @@ class Game extends React.Component {
         <div className="game">
           <Header
             name={this.state.name}
+            token={this.state.token}
           />
 
           <Status
