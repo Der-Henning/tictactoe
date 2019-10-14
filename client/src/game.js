@@ -25,15 +25,15 @@ class Registration extends React.Component {
     //let name = this.props.name;
     return (
       <form name="regForm">
-        <label for="name">Username:</label><br />
-        <input type="text" name="name" value={this.state.name} onChange={this.handleChange} required/><br />
-        <label for="email">E-Mail:</label><br />
-        <input type="text" name="email" onChange={this.handleChange} required/><br />
-        <label for="password">Password:</label><br />
-        <input type="password" name="password" onChange={this.handleChange} required/><br />
-        <label for="repPassword">repeat password:</label><br />
-        <input type="password" name="repPassword" onChange={this.handleChange} required/><br /><br />
-        <input type="button" name="submit" value="submit" onClick={this.register}/><br />
+        <label for="regname">Username:</label><br />
+        <input type="text" name="name" id="regname" value={this.state.name} onChange={this.handleChange} required/><br />
+        <label for="regemail">E-Mail:</label><br />
+        <input type="text" name="email" id="regemail" onChange={this.handleChange} required/><br />
+        <label for="regpassword">Password:</label><br />
+        <input type="password" name="password" id="regpassword" onChange={this.handleChange} required/><br />
+        <label for="regrepPassword">repeat password:</label><br />
+        <input type="password" name="repPassword" id="regrepPassword" onChange={this.handleChange} required/><br /><br />
+        <input type="button" value="submit" onClick={this.register}/><br />
         <div className="error">{this.state.error}</div>
       </form>
     )
@@ -45,7 +45,6 @@ class Registration extends React.Component {
 
   register(event) {
     const { cookies } = this.props;
-    console.log(this.props.token);
     this.setState({
       error: ''
     });
@@ -71,12 +70,13 @@ class Registration extends React.Component {
           this.setState({token: res.headers.get("x-auth-token")});
           cookies.set('token', this.state.token, 
             { path: '/', expires: new Date(Date.now() + (10 * 365 * 24 * 60 * 60 * 1000))});
+          this.props.closeForm();
         } else {
           return res.text();
         }
       })
       .then(data => {
-        console.log(data);
+        this.setState({error: data});
       });
     }
     event.preventDefault();
@@ -99,39 +99,59 @@ class Header extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      form: false
+      regForm: false,
+      logForm: false
     }
-  }
-  headerClick() {
-    this.setState({form: true});
+    this.closeForm = this.closeForm.bind(this);
   }
 
-  openForm() {
-    if (this.state.form) {
-      if (this.props.email) {
-        return null;
-      } else {
-        return (
-          <div id="formContainer">
-            <div id="regForm">
-              <button onClick={()=>this.setState({form: false})}>X</button>
-              <Registration
-                name={this.props.name}
-                token={this.props.token}
-              />
-            </div>
+  openRegForm() {
+    if (this.state.regForm) {
+      return (
+        <div id="formContainer">
+          <div id="regForm">
+            <button onClick={()=>this.setState({regForm: false})}>X</button>
+            <Registration
+              name={this.props.name}
+              token={this.props.token}
+              cookies={this.props.cookies}
+              closeForm={this.closeForm}
+            />
           </div>
-        )
-      }
+        </div>
+      )
     } else return null;
   }
+  openLogForm() {
+    if (this.state.logForm) {
+      return null;
+    } else return null;
+  }
+
+  closeForm() {
+    this.setState({
+      regForm: false,
+      logForm: false
+    });
+  }
+
   render() {
-    return (
-      <div className="game-header">
-        <button onClick={()=>this.setState({form: true})}>{this.props.name}</button>
-        {this.openForm()}
-      </div>
-    )
+    if (!this.props.email) {
+      return (
+        <div className="game-header">
+          <button onClick={() => this.setState({regForm: true})}>Register</button>
+          <button onClick={() => this.setState({logForm: true})}>Login</button>
+          {this.openRegForm()}
+          {this.openLogForm()}
+        </div>
+      )
+    } else {
+      return (
+        <div className="game-header">
+          <button onClick={() => this.props.logout()}>Logout</button>
+        </div>
+      )
+    }
   }
 }
 
@@ -251,15 +271,17 @@ class Game extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-
+      socket: null,
       log: []
     }
+    this.logout = this.logout.bind(this);
   }
 
   componentDidMount() {
     const socket = socketIOClient();
     const { cookies } = this.props;
     socket.on('connect', () => {
+      this.setState({socket: socket.id});
        if (!cookies.get('token')) {
         fetch("/user/newanonymous", {
           method: 'POST',
@@ -319,6 +341,21 @@ class Game extends React.Component {
     });
   }
   
+  logout() {
+    fetch("/user/logout", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-access-token': this.state.token
+      }
+    })
+    .then(res => {
+      this.setState({token: res.headers.get("x-auth-token"), email: null});
+      this.props.cookies.set('token', this.state.token, 
+        { path: '/', expires: new Date(Date.now() + (10 * 365 * 24 * 60 * 60 * 1000))}); 
+    });
+  }
+
   render() {
     if(this.state.kicked) {
       return (
@@ -329,7 +366,10 @@ class Game extends React.Component {
         <div className="game">
           <Header
             name={this.state.name}
+            email={this.state.email}
             token={this.state.token}
+            cookies={this.props.cookies}
+            logout={this.logout}
           />
 
           <Status

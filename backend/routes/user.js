@@ -49,15 +49,15 @@ router.post("/user/registration", auth, async (req, res) => {
   const { error } = validate(req.body);
   if (error) return res.status(400).send(error.details[0].message);
 
-  let player = await Player.findOne({ email: req.body.email });
-  if (player) return res.status(400).send("Mail already registered.");
-  player = await Player.findOne({ name: req.body.name });
+  let player = await Player.findOne({ name: req.body.name });
   if (player) return res.status(400).send("Playername already registered.");
-
+  player = await Player.findOne({ email: req.body.email });
+  if (player) return res.status(400).send("Mail already registered.");
+  
   player = await Player.findById(req.player);
   player.name = req.body.name;
   player.email = req.body.email;
-  player.password = await bcrypt.hash(player.password, 10);
+  player.password = await bcrypt.hash(req.body.password, 10);
   await player.save();
 
   const token = player.generateAuthToken();
@@ -75,6 +75,20 @@ router.post("/user/login", async (req, res) => {
     name: player.name,
     email: player.email
   });
+});
+
+router.post("/user/logout", auth, async (req, res) => {
+  let player = await Player.findById(req.player);
+  const socket = player.socket;
+  game.playerDisc(socket);
+  player.socket = null;
+  await player.save();
+  player = await Player.create({
+    socket: socket
+  });
+  const token = player.generateAuthToken();
+  res.header("x-auth-token", token).send("Welcome!");
+  game.newPlayer(player);
 });
 
 module.exports = router;
