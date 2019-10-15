@@ -182,7 +182,7 @@ body {
   margin: 10px;
 }
 
-  #regForm {
+  .reglogForm {
     background: white;
     position: relative;
     padding: 10px 5px 5px 5px;
@@ -195,13 +195,13 @@ body {
     overflow: auto;
   }
 
-  #regForm button {
+  .reglogForm button {
     position: absolute;
     top:0;
     right: 0;
   }
 
-  #regForm input[type=text], input[type=password] {
+  .reglogForm input[type=text], input[type=password] {
     margin-top: 3px;
     margin-bottom: 6px;
     width: 100%;

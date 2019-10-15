@@ -2,85 +2,12 @@ import React from 'react';
 import './index.css';
 import socketIOClient from 'socket.io-client';
 import { withCookies } from 'react-cookie';
+import { Registration, Login } from './user';
 
 function Square(props) {
     return (
         <button className={"square " + props.value} onClick={props.onClick}/>
     )
-}
-
-class Registration extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      error: '',
-      name: this.props.name,
-      email: '',
-      password: ''
-    }
-    this.handleChange = this.handleChange.bind(this);
-    this.register = this.register.bind(this);
-  }
-  render() {
-    //let name = this.props.name;
-    return (
-      <form name="regForm">
-        <label for="regname">Username:</label><br />
-        <input type="text" name="name" id="regname" value={this.state.name} onChange={this.handleChange} required/><br />
-        <label for="regemail">E-Mail:</label><br />
-        <input type="text" name="email" id="regemail" onChange={this.handleChange} required/><br />
-        <label for="regpassword">Password:</label><br />
-        <input type="password" name="password" id="regpassword" onChange={this.handleChange} required/><br />
-        <label for="regrepPassword">repeat password:</label><br />
-        <input type="password" name="repPassword" id="regrepPassword" onChange={this.handleChange} required/><br /><br />
-        <input type="button" value="submit" onClick={this.register}/><br />
-        <div className="error">{this.state.error}</div>
-      </form>
-    )
-  }
-
-  handleChange(event) {
-    this.setState({[event.target.name]: event.target.value});
-  }
-
-  register(event) {
-    const { cookies } = this.props;
-    this.setState({
-      error: ''
-    });
-    if (this.state.password !== this.state.repPassword){
-      this.setState({
-        error: 'Passwords don\'t match!'
-      });
-    } else {
-      fetch("/user/registration", {
-        method: 'POST',
-        body: JSON.stringify({
-          'name': this.state.name,
-          'email': this.state.email,
-          'password': this.state.password
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-          'x-access-token': this.props.token
-        }
-      })
-      .then(res => {
-        if (res.status === 200) {
-          this.setState({token: res.headers.get("x-auth-token")});
-          cookies.set('token', this.state.token, 
-            { path: '/', expires: new Date(Date.now() + (10 * 365 * 24 * 60 * 60 * 1000))});
-          this.props.closeForm();
-        } else {
-          return res.text();
-        }
-      })
-      .then(data => {
-        this.setState({error: data});
-      });
-    }
-    event.preventDefault();
-  }
 }
 
 class Logger extends React.Component {
@@ -108,12 +35,11 @@ class Header extends React.Component {
   openRegForm() {
     if (this.state.regForm) {
       return (
-        <div id="formContainer">
-          <div id="regForm">
+        <div id="formContainer" onClick={()=>this.setState({regForm: false})}>
+          <div className="reglogForm" onClick={(e)=>e.stopPropagation()}>
             <button onClick={()=>this.setState({regForm: false})}>X</button>
             <Registration
               name={this.props.name}
-              token={this.props.token}
               cookies={this.props.cookies}
               closeForm={this.closeForm}
             />
@@ -122,9 +48,21 @@ class Header extends React.Component {
       )
     } else return null;
   }
+
   openLogForm() {
     if (this.state.logForm) {
-      return null;
+      return (
+        <div id="formContainer" onClick={()=>this.setState({logForm: false})}>
+          <div className="reglogForm" onClick={(e)=>e.stopPropagation()}>
+            <button onClick={()=>this.setState({logForm: false})}>X</button>
+            <Login
+              cookies={this.props.cookies}
+              closeForm={this.closeForm}
+              socket={this.props.socket}
+            />
+          </div>
+        </div>
+      )
     } else return null;
   }
 
@@ -139,8 +77,8 @@ class Header extends React.Component {
     if (!this.props.email) {
       return (
         <div className="game-header">
-          <button onClick={() => this.setState({regForm: true})}>Register</button>
-          <button onClick={() => this.setState({logForm: true})}>Login</button>
+          <button onClick={() => this.setState({regForm: true, logForm: false})}>Register</button>
+          <button onClick={() => this.setState({regform: false, logForm: true})}>Login</button>
           {this.openRegForm()}
           {this.openLogForm()}
         </div>
@@ -172,7 +110,7 @@ class Info extends React.Component {
         <div>Draws: {this.props.draws}</div>
         <div><NewGameBtn 
           winner={this.props.winner}
-          token={this.props.token}
+          token={this.props.cookies.get('token')}
         /></div>
       </div>
     )
@@ -206,7 +144,7 @@ class Board extends React.Component {
       }),
       headers: {
         'Content-Type': 'application/json',
-        'x-access-token': this.props.token
+        'x-access-token': this.props.cookies.get('token')
       },
     }); 
   } 
@@ -293,14 +231,10 @@ class Game extends React.Component {
           }
         })
         .then(res => {
-          this.setState({token: res.headers.get("x-auth-token")});
-          cookies.set('token', this.state.token, 
+          cookies.set('token', res.headers.get("x-auth-token"), 
             { path: '/', expires: new Date(Date.now() + (10 * 365 * 24 * 60 * 60 * 1000))});
         });
       } else {
-        this.setState({
-          token: cookies.get('token')
-        });
         fetch("/user/connect", {
           method: 'POST',
           body: JSON.stringify({
@@ -308,7 +242,7 @@ class Game extends React.Component {
           }),
           headers: {
             'Content-Type': 'application/json',
-            'x-access-token': this.state.token
+            'x-access-token': cookies.get('token')
           }
         });
       } 
@@ -317,6 +251,7 @@ class Game extends React.Component {
       this.setState(data);
     });
     socket.on("Player", data => {
+      this.setState(data);
       if (data.inQueue) {
         this.setState({
           squares: null,
@@ -325,8 +260,6 @@ class Game extends React.Component {
           side: null
         });
       }
-      
-      this.setState(data);
     });
     socket.on("LogAPI", data => {
       this.setState({
@@ -342,16 +275,17 @@ class Game extends React.Component {
   }
   
   logout() {
+    const { cookies } = this.props;
     fetch("/user/logout", {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-access-token': this.state.token
+        'x-access-token': cookies.get('token')
       }
     })
     .then(res => {
-      this.setState({token: res.headers.get("x-auth-token"), email: null});
-      this.props.cookies.set('token', this.state.token, 
+      this.setState({email: null});
+      this.props.cookies.set('token', res.headers.get("x-auth-token"), 
         { path: '/', expires: new Date(Date.now() + (10 * 365 * 24 * 60 * 60 * 1000))}); 
     });
   }
@@ -367,9 +301,9 @@ class Game extends React.Component {
           <Header
             name={this.state.name}
             email={this.state.email}
-            token={this.state.token}
             cookies={this.props.cookies}
             logout={this.logout}
+            socket={this.state.socket}
           />
 
           <Status
@@ -386,7 +320,7 @@ class Game extends React.Component {
             started={this.state.started}
             game={this.state.gameName}
             inQueue={this.state.inQueue}
-            token={this.state.token}
+            cookies={this.props.cookies}
           />
 
           <Info 
@@ -396,7 +330,7 @@ class Game extends React.Component {
             losses={this.state.losses}
             draws={this.state.draws}
             winner={this.state.winner}
-            token={this.state.token}
+            cookies={this.props.cookies}
           />
 
           <Logger
