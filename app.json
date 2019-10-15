@@ -1,24 +1,24 @@
 {
-    "addons": [
-      "mongolab"
-    ],
-    "buildpacks": [
-      {
-        "url": "heroku/nodejs"
-      }
-    ],
-    "env": {
-      "MONGODB_URI": {
-        "required": true
-      }
-    },
-    "formation": {
-      "web": {
-        "quantity": 1
-      }
-    },
-    "name": "tictactoe",
-    "scripts": {
-    },
-    "stack": "heroku-18"
-  }
+  "addons": [
+    "mongolab"
+  ],
+  "buildpacks": [
+    {
+      "url": "heroku/nodejs"
+    }
+  ],
+  "env": {
+    "MONGODB_URI": {
+      "required": true
+    }
+  },
+  "formation": {
+    "web": {
+      "quantity": 1
+    }
+  },
+  "name": "tictactoe",
+  "scripts": {
+  },
+  "stack": "heroku-18"
+}
