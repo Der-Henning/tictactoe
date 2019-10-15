@@ -23,18 +23,17 @@ mongoose.connect(MONGODB,
     })
     .then(() => {
         console.log("Connected to MongoDB...");
+        app.use(cors());
+        app.use(bodyParser.json());
+        app.use(bodyParser.urlencoded({extended: true}));
+        const server = http.createServer(app);
+        socket.start(server);
+        app.use(index);
+        app.use(api);
+        app.use(user);
+        app.use(express.static(path.join(__dirname, '../client/build')));
         game.init()
         .then(() => {
-            app.use(cors());
-            app.use(bodyParser.json());
-            app.use(bodyParser.urlencoded({extended: true}));
-            const server = http.createServer(app);
-            socket.start(server);
-            app.use(index);
-            app.use(api);
-            app.use(user);
-            app.use(express.static(path.join(__dirname, '../client/build')));
-            
             server.listen(port, () => console.log(`Listening on port ${port}...`));
         });
     });

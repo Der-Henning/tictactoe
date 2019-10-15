@@ -31,25 +31,22 @@ exports.newPlayer = async function(player) {
     player.timeoutTimer = null;
     await player.save();
     logger(player.name + " connected!");
-    updateClient(null, player, null);
     setGame();
 }
 
 exports.playerDisc = async function(socketID) {
-    const players = await Player.find({socket: socketID});
-    if (players.length > 0) {
-        const player = players[0];
+    const player = await Player.findOne({socket: socketID});
+    if (player) {
         logger(player.name + " disconnected!!");
         player.online = false;
         player.inQueue = false;
         player.socket = null;
-        await player.save();
+        player.save();
         if (player.game) {
             const game = await Game.findById(player.game);
             game.winner = (game.playerX.equals(player._id)) ? 'O' : 'X';
             await setWinner(game);
             game.save();
-            updateClients(game);
         }
     }
 }
@@ -59,7 +56,6 @@ exports.newGame = async function(playerID) {
     if (!player.game) {
         player.inQueue = true;
         player.queueStarted = Date.now();
-        updateClient(null, player, null);
         await player.save();
         setGame();
     }
@@ -67,6 +63,10 @@ exports.newGame = async function(playerID) {
 
 exports.playerAction = function(playerID, btn) {
     playerAction(playerID, btn);
+}
+
+exports.botSocket = function(playerID, res) {
+    botAction(playerID, res);
 }
 
 async function setGame() {
@@ -84,10 +84,11 @@ async function setGame() {
 
         const game = await Game.create({playerX: playerX._id, playerO: playerO._id, started: true});
         playerX.game = game._id;
-        playerX.save();
         playerO.game = game._id;
-        playerO.save();
-        updateClients(game);
+        playerX.timeoutTimer = Date.now() + TIMEOUT;
+        setTimeout(timeoutPlayer, TIMEOUT, playerX._id);
+        await playerX.save();
+        await playerO.save();
         logger('Startet ' + game.name + ' with ' + playerX.name + ' (X) and ' + playerO.name + ' (O).');
     } else if (Players.length === 1) {
         setTimeout(spawnBot, 5000, Players[0]._id);
@@ -95,16 +96,15 @@ async function setGame() {
 }
 
 async function playerAction(playerID, btn) {
-    const player = await Player.findById(playerID);
-    let game = null;
+    let player = await Player.findById(playerID);
     if(player.game) {
-        game = await Game.findById(player.game);
+        const game = await Game.findById(player.game);
 
         if((game.playerX && game.playerX.equals(player._id) && !game.xIsNext) ||
             (game.playerO && game.playerO.equals(player._id) && game.xIsNext)) return;
         if(game.winner || game.squares[btn]) return;
         player.timeoutTimer = null;
-        player.save();
+        await player.save();
         game.squares[btn] = game.xIsNext ? 'X' : 'O';
         game.xIsNext = !game.xIsNext;
         game.markModified('squares');
@@ -114,14 +114,13 @@ async function playerAction(playerID, btn) {
         if (game.winner) await setWinner(game);
 
         await game.save();
-
-        updateClients(game);
+        if (!player.bot && game.started && !game.winner) {
+            player = (game.xIsNext) ? await Player.findById(game.playerX) : await Player.findById(game.playerO);
+            player.timeoutTimer = Date.now() + TIMEOUT;
+            setTimeout(timeoutPlayer, TIMEOUT, player._id);
+            player.save();
+        }
     }
-/*     if (game) {
-        updateClients(game);
-    } else {
-        updateClient(null, player, null);
-    } */
 }
 
 async function setWinner(game) {
@@ -171,57 +170,14 @@ function lossScore(losses, winns) {
     return -5 * Math.sqrt((losses + 1) / (winns + 1));
 }
 
-async function updateClients(game) {
-    if (game.playerX) {
-        updateClient(game, await Player.findById(game.playerX), 'X');
-    }
-    if (game.playerO) {
-        updateClient(game, await Player.findById(game.playerO), 'O');
-    }
-}
-
-function updateClient(game, player, side) {
-    if (!game) {
-        game = {
-            started: false,
-            winner: null,
-            name: null
-        }
-    }
-    const res = {
-        gameName: game.name,
-        squares: game.squares,
-        winner: game.winner,
-        xIsNext: game.xIsNext,
-        started: game.started,
-        name: player.name,
-        side: side,
-        winns: player.winns,
-        losses: player.losses,
-        draws: player.draws,
-        wlRatio: player.wlRatio,
-        score: player.score
-    }
-    socket.emit('FromAPI', player.socket, res);
-    if (player.bot) {
-        res.player = player._id;
-        botAction(res);
-    } else if (game.started && !game.winner && ((game.xIsNext && side === 'X') || (!game.xIsNext && side === 'O'))) {
-        player.timeoutTimer = Date.now() + TIMEOUT;
-        setTimeout(timeoutPlayer, TIMEOUT, player._id);
-        player.save();
-    }
-}
-
 async function timeoutPlayer(playerID) {
     const player = await Player.findById(playerID);
     if (player.game && player.timeoutTimer && player.timeoutTimer <= Date.now()) {
         const game = await Game.findById(player.game);
         logger(player.name + " timed out!!");
         game.winner = (game.playerX.equals(player._id)) ? 'O' : 'X';
-        setWinner(game);
+        await setWinner(game);
         game.save();
-        updateClients(game);
     }
 }
 
@@ -246,7 +202,7 @@ async function spawnBot(playerID) {
     }
 }
 
-function botAction(res) {
+function botAction(playerID, res) {
     if (!res.winner && ((res.xIsNext && res.side === 'X') || (!res.xIsNext && res.side === 'O'))) {
         const side = res.side;
         const opponent = (res.side === 'X') ? 'O' : 'X';
@@ -293,7 +249,7 @@ function botAction(res) {
                 btn = Math.floor(Math.random() * 9);
             } while (res.squares[btn]);
         }
-        setTimeout(playerAction, 200, res.player, btn);
+        setTimeout(playerAction, 1000, playerID, btn);
     }
 }
 

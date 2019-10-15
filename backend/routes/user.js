@@ -49,23 +49,47 @@ router.post("/user/registration", auth, async (req, res) => {
   const { error } = validate(req.body);
   if (error) return res.status(400).send(error.details[0].message);
 
-  let player = await Player.findOne({ email: req.body.email });
+  let player = await Player.findOne({ name: req.body.name });
+  if (player && player._id.toString() !== req.player) return res.status(400).send("Playername already registered.");
+  player = await Player.findOne({ email: req.body.email });
   if (player) return res.status(400).send("Mail already registered.");
-  player = await Player.findOne({ name: req.body.name });
-  if (player) return res.status(400).send("Playername already registered.");
-
+  
   player = await Player.findById(req.player);
   player.name = req.body.name;
   player.email = req.body.email;
-  player.password = await bcrypt.hash(player.password, 10);
+  player.password = await bcrypt.hash(req.body.password, 10);
   await player.save();
 
   const token = player.generateAuthToken();
-  res.header("x-auth-token", token).send({
-    _id: player._id,
-    name: player.name,
-    email: player.email
+  res.header("x-auth-token", token).send("Welcome " + player.name + "!");
+});
+
+router.post("/user/login", auth, async (req, res) => {
+  const player = await Player.findOne({ $or: [ {email: req.body.login}, {name: req.body.login} ] });
+ // if(player) console.log(bcrypt.compareSync(req.body.password, player.password));
+  if(!player || !bcrypt.compareSync(req.body.password, player.password)) return res.status(400).send("Unknown Username/Password combination");
+
+  const prevPlayer = await Player.findById(req.player);
+  game.playerDisc(prevPlayer.socket);
+
+  player.socket = req.body.socket;
+  const token = player.generateAuthToken();
+  res.header("x-auth-token", token).send("Welcome " + player.name + "!");
+  game.newPlayer(player);
+});
+
+router.post("/user/logout", auth, async (req, res) => {
+  let player = await Player.findById(req.player);
+  const socket = player.socket;
+  game.playerDisc(socket);
+  player.socket = null;
+  await player.save();
+  player = await Player.create({
+    socket: socket
   });
+  const token = player.generateAuthToken();
+  res.header("x-auth-token", token).send("Welcome " + player.name + "!");
+  game.newPlayer(player);
 });
 
 module.exports = router;

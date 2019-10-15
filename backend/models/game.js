@@ -40,4 +40,8 @@ gameSchema.pre('save', async function(next) {
     }
 });
 
+gameSchema.post('save', function(game) {
+    require('../middleware/socket').updateGame(game);
+});
+
 module.exports = mongoose.model('Game', gameSchema);

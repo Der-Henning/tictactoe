@@ -80,17 +80,28 @@ body {
       "footer" 
     ; 
   }
-
+  .game-board {
+    grid-area: game;
+    width: 100%;
+    height: 100%;
+    align-self: start;
+    justify-self: center;
+    max-width: 450px;
+    max-height: 450px;
+  }
   @media screen and (min-width: 500px) { 
     .game {
       grid-template-rows: 20px 20px 1fr 20px; 
       grid-template-columns: 1fr 1fr; 
       grid-template-areas:  
-        "header header" 
-        "status game "
+        "header status" 
+        "info game "
         "info game " 
         "footer footer " 
       ; 
+    }
+    .game-board {
+      max-width: calc(100vh - 60px);
     }
   }
 
@@ -113,15 +124,11 @@ body {
     }
   }
 
-.game-board {
-  grid-area: game;
-  width: 100%;
-  height: 100%;
-  align-self: start;
-  justify-self: center;
-  max-width: 450px;
-  max-height: 450px;
+.game-header {
+  grid-area: header;
 }
+
+
 
   .board-container {
     width: 100%; 
@@ -163,4 +170,40 @@ body {
   .newGameBtn {
     margin-top: 10px; 
     margin-left: 20px;
+  }
+
+#formContainer {
+  position: absolute;
+  top:0;
+  left:0;
+  right:0;
+  bottom: 0;
+  z-index: 999;
+  margin: 10px;
+}
+
+  .reglogForm {
+    background: white;
+    position: relative;
+    padding: 10px 5px 5px 5px;
+    border: 3px solid lightskyblue;
+    height: calc(100% - 41px);
+    width: calc(100% - 16px);
+    max-width: 400px;
+    max-height: 500px;
+    margin: auto;
+    overflow: auto;
+  }
+
+  .reglogForm button {
+    position: absolute;
+    top:0;
+    right: 0;
+  }
+
+  .reglogForm input[type=text], input[type=password] {
+    margin-top: 3px;
+    margin-bottom: 6px;
+    width: 100%;
+    max-width: 250px;
   }

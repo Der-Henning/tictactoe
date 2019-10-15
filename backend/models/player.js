@@ -70,8 +70,7 @@ var playerSchema = new mongoose.Schema( {
 playerSchema.methods.generateAuthToken = function() { 
     const token = jwt.sign({ _id: this._id, name: this.name }, config.get('myprivatekey'));
     return token;
-  }
-
+}
 
 playerSchema.pre('save', async function(next) {
     var player = this;
@@ -86,6 +85,10 @@ playerSchema.pre('save', async function(next) {
     } else {
         next();
     }
+});
+
+playerSchema.post('save', function(player) {
+    require('../middleware/socket').updatePlayer(player);
 });
 
 function validateUser(user) {
